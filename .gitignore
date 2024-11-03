@@ -1,3 +1,7 @@
 # Ignore Virtual Environment
 
 env/
+
+# Ignore .DS_Store
+
+.DS_Store
