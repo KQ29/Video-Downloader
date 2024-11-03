@@ -1,22 +1,20 @@
 import os
 import logging
 import instaloader
-from TikTokApi import TikTokApi
-import yt_dlp
+import yt_dlp  # For YouTube and TikTok downloads
+
+# Constants
+DEFAULT_SAVE_PATH = './downloads'
+LOG_FORMAT = '%(asctime)s - %(levelname)s - %(message)s'
 
 # Set up logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(level=logging.INFO, format=LOG_FORMAT)
 
 def download_youtube_video(url, save_path):
+    # Simplified options to download the best available MP4 format without enhancements
     ydl_opts = {
         'outtmpl': os.path.join(save_path, '%(title)s.%(ext)s'),
-        'format': 'bestvideo+bestaudio/best',
-        'merge_output_format': 'mp4',
-        'postprocessors': [{
-            'key': 'FFmpegVideoConvertor',
-            'preferedformat': 'mp4',
-        }],
-        'ffmpeg_location': '/usr/local/bin/ffmpeg'  # Path for ffmpeg
+        'format': 'mp4',  # Best available MP4 format without any quality enhancements
     }
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -28,29 +26,25 @@ def download_youtube_video(url, save_path):
 
 def download_tiktok_video(url, save_path):
     try:
-        api = TikTokApi()
-        video = api.video(url=url)
-        video_data = video.bytes()
-        video_id = video.id
-        file_path = os.path.join(save_path, f'tiktok_{video_id}.mp4')
-        with open(file_path, 'wb') as f:
-            f.write(video_data)
-        logging.info(f"TikTok video downloaded: {file_path}")
+        ydl_opts = {
+            'outtmpl': os.path.join(save_path, 'tiktok_%(id)s.%(ext)s'),
+            'format': 'mp4',  # Only download mp4 format
+        }
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            logging.info(f"Downloading TikTok video from URL: {url}")
+            ydl.download([url])
+            logging.info("TikTok video downloaded successfully.")
     except Exception as e:
         logging.error(f"Error downloading TikTok video: {str(e)}")
 
 def download_instagram_content(url, save_path):
     try:
-        # Initialize Instaloader
         loader = instaloader.Instaloader(dirname_pattern=save_path)
-        
-        # Prompt for Instagram login if needed
         username = input("Enter your Instagram username (or press Enter to skip): ").strip()
         if username:
             password = input("Enter your Instagram password: ").strip()
             loader.login(username, password)
 
-        # Check if URL is a post or reel and download accordingly
         if "/p/" in url or "/reel/" in url:
             shortcode = url.split("/")[-2]
             post = instaloader.Post.from_shortcode(loader.context, shortcode)
@@ -65,7 +59,7 @@ def download_instagram_content(url, save_path):
     except Exception as e:
         logging.error(f"Error downloading Instagram content: {str(e)}")
 
-def download_content_from_url(url, save_path='./downloads'):
+def download_content_from_url(url, save_path=DEFAULT_SAVE_PATH):
     if "youtube.com" in url or "youtu.be" in url:
         download_youtube_video(url, save_path)
     elif "tiktok.com" in url:
@@ -77,6 +71,6 @@ def download_content_from_url(url, save_path='./downloads'):
 
 if __name__ == "__main__":
     url = input("Please provide the URL (YouTube, TikTok, or Instagram): ")
-    save_path = input("Enter the save path or press Enter to use './downloads': ") or './downloads'
+    save_path = input(f"Enter the save path or press Enter to use '{DEFAULT_SAVE_PATH}': ") or DEFAULT_SAVE_PATH
     os.makedirs(save_path, exist_ok=True)
     download_content_from_url(url, save_path)
